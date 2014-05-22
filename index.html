@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>ember-spin-box demo</title>
+        <meta charset="UTF-8">
+        <meta name="author" content="Bill Dami" />
+        <meta name="description" content="A lightweight and versatile spin box component for ember.js applications." />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="HandheldFriendly" content="True">
+        <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" media="all" />
+        <link rel="stylesheet" href="https://rawgit.com/billdami/ember-spin-box/master/dist/ember-spin-box.min.css" media="all" />
+        <link rel="stylesheet" href="https://rawgit.com/billdami/ember-spin-box/master/dist/demo.css" media="all">
+    </head>
+    <body>
+        <script type="text/x-handlebars">
+            <div class="container">
+                <h1>ember-spin-box</h1>
+                <hr />
+                <h3>A lightweight and versatile spin box component for ember.js applications.</h3>
+                <p>
+                    <a href="https://github.com/billdami/ember-spin-box" class="btn btn-default">View it on GitHub</a>
+                </p>
+                <div class="example">
+                    <h3>Basic spin box</h3>
+                    <p>A spin box is a simple component for displaying a list of items that they user may choose from by spinning the list until the desired value is selected. The spin box can be controlled by the mouse scroll wheel and the arrow keys (when focused) on desktop, and via touch scrolling on touch-enabled devices.</p>
+                    {{spin-box content=basicExampleContent value=basicExampleValue rowHeight=28 tabindex=1}}
+                </div>
+                <div class="example">            
+                    <h3>Combining multiple spin boxes</h3>
+                    <p>Multiple spin boxes can be easily combined to create more complex components, like a date/time picker.</p>
+                    <div class="datetime-pickers clearfix">
+                        <div class="date-picker">
+                            <div class="spinboxes clearfix">
+                                {{spin-box content=months value=selectedMonth rowHeight=28 tabindex=2 class="date-month"}}
+                                {{spin-box content=days value=selectedDay rowHeight=28 tabindex=3 class="date-day"}}
+                                {{spin-box range=yearRange value=selectedYear rowHeight=28 tabindex=4 class="date-year"}}
+                            </div>
+                        </div>
+                        <div class="time-picker">
+                            <div class="spinboxes clearfix">
+                                {{spin-box content=hours value=selectedHour rowHeight=28 tabindex=5 class="time-hour"}}
+                                {{spin-box content=minutes value=selectedMinute rowHeight=28 tabindex=6 class="time-minute"}}
+                                {{spin-box content=clockPeriods value=selectedPeriod rowHeight=28 circular=false tabindex=7 class="time-period"}}
+                            </div>
+                        </div>
+                    </div>
+                    {{input class="datetime-display form-control" readonly=true value=selectedDate tabindex=8}}
+                </div>
+
+                <div class="example">
+                    <h3>Changing the number of visible rows</h3>
+                    <p>Use the <code>visibleRows</code> parameter to customize the number of visible rows that are displayed. Note that <code>visibleRows</code> must be an <strong>odd</strong> number, so that there is a middle row which represents the selected value.</p>
+                    <div class="clearfix">
+                        {{spin-box range=btnsExampleRange value=15 rowHeight=28 tabindex=9 visibleRows=7 class="visible-rows-example"}}
+                        {{spin-box range=btnsExampleRange value=15 rowHeight=28 tabindex=10 visibleRows=3 class="visible-rows-example"}}
+                        {{spin-box range=btnsExampleRange value=15 rowHeight=28 tabindex=11 visibleRows=1 class="visible-rows-example"}}
+                    </div>
+                </div>
+
+                <div class="example">
+                    <h3>Adding increment/decrement buttons</h3>
+                    <p>Use the <code>spinUpWhen</code> and <code>spinDownWhen</code> parameters to control the spin box externally.</p>
+                    <div class="clearfix">
+                        <div class="pull-left">
+                            <div class="spinbox-example-btns spinbox-example-btns-vert clearfix">
+                                <button class="btn btn-default spinbox-btn" tabindex="12" {{action "spin" "Ex1" "up"}}><span class="glyphicon glyphicon-chevron-up"></span></button>
+                                {{spin-box range=btnsExampleRange value=1 rowHeight=28 tabindex=13 spinUpWhen=spinEx1Up spinDownWhen=spinEx1Down}}
+                                <button class="btn btn-default spinbox-btn" tabindex="14" {{action "spin" "Ex1" "down"}}><span class="glyphicon glyphicon-chevron-down"></span></button>
+                            </div>
+                        </div>
+                        <div class="pull-left">
+                            <div class="spinbox-example-btns spinbox-example-btns-horiz clearfix">
+                                <button class="btn btn-default spinbox-btn" tabindex="15" {{action "spin" "Ex2" "up"}}><span class="glyphicon glyphicon-minus"></span></button>
+                                {{spin-box range=btnsExampleRange value=1 rowHeight=28 tabindex=16 visibleRows=1 spinUpWhen=spinEx2Up spinDownWhen=spinEx2Down}}
+                                <button class="btn btn-default spinbox-btn" tabindex="17" {{action "spin" "Ex2" "down"}}><span class="glyphicon glyphicon-plus"></span></button>
+                            </div>
+                            <div class="spinbox-example-btns spinbox-example-btns-split clearfix">
+                                {{spin-box range=btnsExampleRange value=1 rowHeight=39 tabindex=18 visibleRows=1 spinUpWhen=spinEx3Up spinDownWhen=spinEx3Down}}
+                                <div class="pull-left">
+                                    <button class="btn btn-default spinbox-btn" tabindex="19" {{action "spin" "Ex3" "up"}}><span class="glyphicon glyphicon-chevron-up"></span></button>
+                                    <button class="btn btn-default spinbox-btn" tabindex="20" {{action "spin" "Ex3" "down"}}><span class="glyphicon glyphicon-chevron-down"></span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="example">
+                    <h3>Customizing the look &amp; feel</h3>
+                    <p>The out of the box CSS for the spin box is intentionally minimalistic and simple so that it can be easily customized to fit the design of your application.</p>
+                    <div class="ios6-picker clearfix">
+                        <div class="date-picker">
+                            <div class="spinboxes clearfix">
+                                {{spin-box content=months value=selectedMonth2 rowHeight=32 tabindex=21 class="date-month"}}
+                                {{spin-box content=days2 value=selectedDay2 rowHeight=32 tabindex=22 class="date-day"}}
+                                {{spin-box range=yearRange value=selectedYear2 rowHeight=32 tabindex=23 class="date-year"}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ios7-picker clearfix">
+                        <div class="date-picker">
+                            <div class="spinboxes clearfix">
+                                {{spin-box content=months value=selectedMonth3 rowHeight=32 visibleRows=7 tabindex=24 class="date-month"}}
+                                {{spin-box content=days3 value=selectedDay3 rowHeight=32 visibleRows=7 tabindex=25 class="date-day"}}
+                                {{spin-box range=yearRange value=selectedYear3 rowHeight=32 visibleRows=7 tabindex=26 class="date-year"}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </script>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.3.0/handlebars.min.js"></script>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/ember.js/1.5.1/ember.min.js"></script>
+        <script src="https://rawgit.com/billdami/ember-spin-box/master/dist/ember-spin-box.min.js"></script>
+        <script src="demo.js"></script>
+    </body>
+</html>

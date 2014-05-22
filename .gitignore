@@ -1,0 +1,31 @@
+# bower
+bower_components
+
+# node
+node_modules
+
+# github project page src
+gh-pages
+
+# temporary/dev files and directories
+tmp
+dev
+
+# sublime text
+*.sublime-workspace
+*.sublime-project
+
+# windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# osx
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+._*
+Icon

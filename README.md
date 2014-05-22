@@ -15,7 +15,7 @@ Features
 
 * Tiny footprint (~2.5k javascript / <1k css, minified and gzipped)
 * Supports mousewheel, keyboard, and touch-based interaction
-* Flexible list options configuration, provide a static array of items or a numeric range
+* Flexible list options configuration, provide an array of items or a numeric range
 * Exposes parameters to allow external control
 * Minimal base CSS that is easy to extend and customize
 
@@ -46,23 +46,23 @@ App.ApplicationController = Ember.ObjectController.extend({
 
 Parameters
 ----------
-* **content** (array, default: `undefined`)  
+* **content** (`array`, default: `undefined`)  
   An array of values to use as the spin box's options. A spin box must either have a value for `content` or `range` (if both are provided, `content` takes precendence).
-* **range** (array, default: `undefined`)  
+* **range** (`array`, default: `undefined`)  
   A numeric range to use as the spin box's options, specified as an array in the form of `[start, end]` where `start` and `end` are integer values that define the lowest and highest values respectively (e.g. `[1900, 2014]`).
-* **value** (mixed, default: `null`)  
+* **value** (`mixed`, default: `null`)  
   The spin box's initially selected value (if it exists in the provided `content` or `range`). If this parameter is bound to a property, it will be updated as the spin box's selection changes.
-* **visibleRows** (int, default: `5`)  
+* **visibleRows** (`int`, default: `5`)  
   The number of option rows that are visible to the user. This value **must be an odd number** so that there is a middle row, which indicates the currently selected value.
-* **rowHeight** (int, default: `28`)  
+* **rowHeight** (`int`, default: `28`)  
   The height, in pixels, of each option row (including padding, margin, border, ect.). If you modify this value, make sure you adjust the relevant CSS properties associated with the `.spinbox-row`  class. This value, in conjunction with `visibleRows`, determines the total height of the spin box.
-* **circular** (bool, default: `true`)  
+* **circular** (`bool`, default: `true`)  
   When set to false, the spin box's options list will not be circular, i.e. moving downwards from the last option will **not** cycle back to the first item, and vice versa.
-* **tabindex** (int, default: `null`)  
+* **tabindex** (`int`, default: `null`)  
   Sets the spin box container element's `tabindex` attribute. Providing a positive integer value allows the spin box to be focusable, enabling keyboard-based interaction (up/down arrows).
-* **spinUpWhen** (bool, default: `undefined`)  
+* **spinUpWhen** (`bool`, default: `undefined`)  
   When the bound property is set to `true`, the spin box will be "spun" upward, and the previous option will be selected. Useful for allowing interaction with the spin box from other parts of you application's interface (see demo for examples).
-* **spinDownWhen** (bool, default: `undefined`)  
+* **spinDownWhen** (`bool`, default: `undefined`)  
   When the bound property is set to `true`, the spin box will be "spun" downward, and the next option will be selected.
-* **onUpdate** (string)  
+* **onUpdate** (`string`)  
   The name of an action to send when the spin box's value has been updated. The new value, and the new value's index are sent as the action's two parameters.

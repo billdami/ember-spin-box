@@ -1,6 +1,6 @@
 {
   "name": "ember-spin-box",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A lightweight and versatile spin box component for ember.js applications.",
   "author": "Bill Dami <billdami@gmail.com>",
   "license": "MIT",

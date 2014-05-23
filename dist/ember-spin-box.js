@@ -109,7 +109,7 @@
             Em.run.scheduleOnce('afterRender', this, this.resetRowsPosition);
         },
 
-        updateSelection: function(updateValueParam) {
+        updateSelection: function(updateValueParam, sendAction) {
             var index = this.get('_selectedIndex'),
                 props = { _selected: this.valueAt(index) };
 
@@ -119,7 +119,13 @@
 
             this.setProperties(props);
             this.updateRows();
-            this.sendAction('onUpdate', props._selected, index);
+
+            if(sendAction) {
+                //send the action after all bindings have been synced
+                Em.run.scheduleOnce('sync', this, function() {
+                    this.sendAction('onUpdate', props._selected, index);
+                });
+            }
         },
 
         getRowText: function(index, ceiling) {
@@ -192,7 +198,7 @@
                 this.get('_scrollAnimDuration'),
                 'swing',
                 Em.run.bind(this, function() {
-                    this.updateSelection(true);
+                    this.updateSelection(true, true);
                 })
             );
         },
@@ -349,7 +355,7 @@
         actions: {
             rowClick: function(rowValue) {
                 this.set('_selectedIndex', this.indexOfValue(rowValue));
-                this.updateSelection(true);
+                this.updateSelection(true, true);
             }
         }
     });

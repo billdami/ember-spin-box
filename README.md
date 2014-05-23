@@ -8,7 +8,7 @@ A lightweight and versatile spin box component for ember.js applications.
 Demo
 ----
 
-http://billdami.github.io/ember-spin-box/
+http://billdami.com/ember-spin-box/
 
 Features
 --------
@@ -65,4 +65,4 @@ Parameters
 * **spinDownWhen** (`bool`, default: `undefined`)  
   When the bound property is set to `true`, the spin box will be "spun" downward, and the next option will be selected.
 * **onUpdate** (`string`)  
-  The name of an action to send when the spin box's value has been updated. The new value, and the new value's index are sent as the action's two parameters.
+  The name of an action to send when the spin box's value has been updated via the interface. The new value, and the new value's index are sent as the action's two parameters.

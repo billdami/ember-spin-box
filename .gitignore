@@ -7,9 +7,8 @@ node_modules
 # github project page src
 gh-pages
 
-# temporary/dev files and directories
+# temporary files and directories
 tmp
-dev
 
 # sublime text
 *.sublime-workspace

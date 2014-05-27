@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>ember-spin-box example</title>
+        <meta charset="UTF-8">
+        <meta name="author" content="Bill Dami" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="HandheldFriendly" content="True" />
+        <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" media="all" />
+        <link rel="stylesheet" href="../dist/ember-spin-box.css" media="all" />
+        <link rel="stylesheet" href="example.css" media="all" />
+    </head>
+    <body>
+        
+        <script type="text/x-handlebars">
+            {{spin-box content=items value=spinboxValue tabindex=1}}
+        </script>
+
+        <script src="../bower_components/jquery/jquery.js"></script>
+        <script src="../bower_components/handlebars/handlebars.js"></script>
+        <script src="../bower_components/ember/ember.js"></script>
+        <script src="example.js"></script>
+        <script src="../dist/ember-spin-box.js"></script>
+    </body>
+</html>

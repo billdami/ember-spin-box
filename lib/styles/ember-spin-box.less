@@ -11,6 +11,9 @@
   }
 
   &-row {
+    position: absolute;
+    left: 0;
+    right: 0;
     overflow: hidden;
     white-space: nowrap;
     cursor: pointer;
@@ -31,8 +34,10 @@
 /**
  * customizable presentational css
  */
+@row-height: 28px;
+
 .spinbox {
-  width: 150px;
+  width: 200px;
   border: 1px solid #ddd;
 
   &:focus {
@@ -47,7 +52,7 @@
   &-row {
     background: transparent;
     padding: 4px 6px;
-    height: 28px;
+    height: @row-height;
     color: #999;
 
     &.selected {
@@ -57,6 +62,7 @@
   }
 
   &-selection-window {
+    height: @row-height;
     z-index: 1;
     background: #f7f7f7;
     border-top: 1px solid #eee;

@@ -4,6 +4,10 @@ App.SpinBoxItemComponent = Ember.Component.extend({
     classNameBindings: ['selected'],
     attributeBindings: ['style'],
 
+    selected: function() {
+        return this.get('index') === this.get('parentView.parentView._selectedIndex');
+    }.property('index', 'parentView.parentView._selectedIndex'),
+
     style: function() {
         return 'top:' + this.get('top') + 'px';
     }.property('top')
@@ -79,10 +83,12 @@ App.SpinBoxComponent = Ember.Component.extend({
     transitionDuration: 400,
     finishDelay: 300,
 
+    _totalSpinOffset: 0,
+
     setup: function() {
         this.$el = this.$();
         this.adjustHeight();
-        this.set('selectedIndex', this.indexOf(this.get('value')));
+        this.set('_selectedIndex', this.indexOf(this.get('value')));
         this.$el.on('mousewheel DOMMouseScroll', Em.run.bind(this, this.handleMouseWheel));
     }.on('didInsertElement'),
 
@@ -111,7 +117,7 @@ App.SpinBoxComponent = Ember.Component.extend({
 
         for(var i=0; i<numRows; i++) {
             views.push(rowView.create({
-                index: startIndex + i,
+                index: this.adjustedIndex(startIndex + i),
                 value: this.valueAt(startIndex + i),
                 top: rowH * i
             }));
@@ -149,51 +155,82 @@ App.SpinBoxComponent = Ember.Component.extend({
     spin: function(direction, distance) {
             var ct = this.get('itemsView'),
             rowH = this.get('rowHeight'),
+            selIndex = this.get('_selectedIndex'),
             child,
             prevChild,
-            newIndex;
+            newIndex,
+            yOffset;
 
         Em.run.cancel(this.get('_finishSpinTimer'));
 
         if(direction === 'up') {
+            yOffset = distance;
             prevChild = ct.objectAt(0);
             newIndex = prevChild.get('index') - 1;
             child = ct.popObject();
             ct.unshiftObject(child);
             child.setProperties({
                 top: prevChild.get('top') - rowH,
-                index: newIndex,
+                index: this.adjustedIndex(newIndex),
                 value: this.valueAt(newIndex)
             });
         } else {
+            yOffset = distance * -1;
             prevChild = ct.objectAt(ct.get('childViews').length - 1);
             newIndex = prevChild.get('index') + 1;
             child = ct.shiftObject();
             ct.pushObject(child);
             child.setProperties({
                 top: prevChild.get('top') + rowH,
-                index: newIndex,
+                index: this.adjustedIndex(newIndex),
                 value: this.valueAt(newIndex)
             });
         }
         
-        ct.adjustYOffset(direction === 'up' ? distance : distance * -1);
+        ct.adjustYOffset(yOffset);
 
-        //@todo calculate the total distance traveled during this spin (i.e. the pos/neg offset value from original position)
-
-
-        //schedule finishSpin to execute after a short period of time
-        this.set('_finishSpinTimer', Em.run.later(this, this.finishSpin, this.get('finishDelay')));
+        this.setProperties({
+            _prevSelectedIndex: selIndex !== null ? selIndex : this.get('_prevSelectedIndex'),
+            _selectedIndex: null,
+            _totalSpinOffset: this.get('_totalSpinOffset') + yOffset,
+            _finishSpinTimer: Em.run.later(this, this.finishSpin, this.get('finishDelay'))
+        });
     },
 
     finishSpin: function() {
-        //@todo determine the newly selected item based on the offset from the original position
-        //if the the Math.abs(_totalSpinOffset % rowHeight) > 0, either animate back the previous item (modulus < rowHeight/2), otherwise animate to the next item
-        
+        var offset = this.get('_totalSpinOffset'),
+            rowH = this.get('rowHeight'),
+            overScroll = Math.abs(offset % rowH),
+            prevIndex = this.get('_prevSelectedIndex'),
+            newIndex = prevIndex + ((offset / rowH) * -1);
+
+        if(offset === 0) {
+            return;
+        } else if(overScroll > 0) {
+            return this.spin(offset < 0 ? 'down' : 'up', overScroll < (rowH / 2) ? overScroll : (rowH - overScroll));
+        }
+
         this.setProperties({
-            _totalSpinOffset: 0
+            _selectedIndex: this.adjustedIndex(newIndex),
+            _totalSpinOffset: 0,
+            value: this.valueAt(newIndex)
         });
     },
+
+    handleTouchStart: function(e) {
+        e.preventDefault();
+        
+    }.on('touchStart'),
+
+    handleTouchMove: function(e) {
+        e.preventDefault();
+
+    }.on('touchMove'),
+
+    handleTouchEnd: function(e) {
+        e.preventDefault();
+        
+    }.on('touchEnd'),
 
     handleKeyDown: function(e) {
         if(e.keyCode != 38 && e.keyCode != 40) return;

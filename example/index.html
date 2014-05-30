@@ -13,13 +13,21 @@
     <body>
         
         <script type="text/x-handlebars">
-            {{spin-box content=items value=spinboxValue tabindex=1 circular=true visibleRows=7 onUpdate='spinboxUpdate'}}
+            {{spin-box content=spinBoxContent value=spinboxValue tabindex=1 circular=true visibleRows=7 onUpdate="spinboxUpdate" spinUpWhen=spinboxUp spinDownWhen=spinboxDown}}
+            <br />
+            {{input class="form-control" value=spinboxValue}}
+            <br />
+            <button class="btn btn-default" {{action "spinUp"}}>Up</button>
+            <button class="btn btn-default" {{action "spinDown"}}>Down</button>
+            <br /><br />
+            <button class="btn btn-default" {{action "switchValues" "numbers"}}>Numbers</button>
+            <button class="btn btn-default" {{action "switchValues" "periods"}}>Periods</button>
         </script>
 
         <script src="../bower_components/jquery/jquery.js"></script>
         <script src="../bower_components/handlebars/handlebars.js"></script>
         <script src="../bower_components/ember/ember.js"></script>
-        <script src="example.js"></script>
         <script src="../dist/ember-spin-box.js"></script>
+        <script src="example.js"></script>
     </body>
 </html>

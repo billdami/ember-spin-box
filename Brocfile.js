@@ -16,7 +16,9 @@ var env = require('broccoli-env').getEnv(),
 
 js = concat(sourceTree, {
     inputFiles: [
-        'components/**/*.js'
+        'components/**/*.js',
+        'views/**/*.js',
+        'main.js'
     ],
     outputFile: '/ember-spin-box.js'
 });

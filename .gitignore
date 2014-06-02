@@ -4,9 +4,6 @@ bower_components
 # node
 node_modules
 
-# github project page src
-gh-pages
-
 # temporary files and directories
 tmp
 

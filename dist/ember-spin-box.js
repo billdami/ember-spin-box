@@ -58,24 +58,30 @@
 
     return SpinBoxSelectionWinComponent;
 });
-/**
- @TODO
-    - BUG: handle momentum spins that exceed bounds when circular=false
-    - improve mousewheel event handling for touchpads (adjust wheelDelta based changes)
-*/
 (function(root, factory) {
     if(typeof define === 'function' && define.amd) {
-        define(['ember'], function(Ember) { return factory(Ember); });
+        define([
+            'ember', 
+            './components/spin-box-row.js'
+        ], function(Ember, Row) { 
+            return factory(Ember, Row); 
+        });
     } else if(typeof exports === 'object') {
-        module.exports = factory(require('ember'));
+        module.exports = factory(
+            require('ember'),
+            require('./components/spin-box-row.js')
+        );
     } else {
-        root.SpinBoxComponent = factory(Ember);
+        root.SpinBoxComponent = factory(
+            Ember, 
+            root.SpinBoxRowComponent
+        );
     }
-})(this, function(Ember) {
+})(this, function(Ember, Row) {
 
     var SpinBoxComponent = Ember.Component.extend({
         layout: Ember.Handlebars.compile(
-            '{{view SpinBoxRowsView}}'+
+            '{{spin-box-rows}}'+
             '{{spin-box-selection-win}}'
         ),
 
@@ -91,6 +97,7 @@
         _defaultTransTiming: 'ease',
         _totalSpinOffset: 0,
         _betweenRowOffset: 0,
+        _momentumDuration: 800,
 
         setup: function() {
             //make sure visibleRows is an odd number
@@ -124,7 +131,7 @@
         }.observes('height'),
 
         renderRows: function() {
-            var rowView = SpinBoxRowComponent,
+            var rowView = Row,
                 rowsView = this.get('rowsView'),
                 rowH = this.get('rowHeight'),
                 numRows = this.get('numRowViews'),
@@ -283,13 +290,19 @@
                 newIndex = curIndex + ((totalOffset / rowH) * -1);
 
             if(!this.get('circular') && (newIndex < this.get('floor') || Math.ceil(newIndex) >= this.get('ceiling'))) {
-                //@todo adjust the yOffset to stay within bounds
-                if(newIndex < this.get('floor')) {
-                    yOffset -= (this.get('floor') - newIndex) * rowH;
-                    if(yOffset <= 0) return;
+                if(Math.abs(yOffset) > rowH) {
+                    this.get('rowsView').enableTransitions(this.get('_momentumDuration') / 2, 'cubic-bezier(0.250, 0.460, 0.450, 0.940)');
+
+                    if(Math.ceil(newIndex) >= this.get('ceiling')) {
+                        yOffset += (newIndex - (this.get('ceiling') - 1)) * rowH;
+                    } else {
+                        yOffset -= (this.get('floor') - newIndex) * rowH;
+                    }
+
+                    totalOffset = this.get('_totalSpinOffset') + yOffset;
+                    betweenRowOffset = this.get('_betweenRowOffset') + yOffset;
                 } else {
-                    yOffset += (Math.ceil(newIndex) - (this.get('ceiling') - 1)) * rowH;
-                    if(yOffset >= 0) return;
+                    return;
                 }
             }
 
@@ -319,10 +332,11 @@
                 overSpin = Math.abs(offset % rowH),
                 prevIndex = this.get('_prevSelectedIndex'),
                 newIndex,
-                newValue;
+                newValue,
+                floorDist,
+                ceilDist;
 
             this.get('rowsView').enableTransitions();
-
             //if there was no change in the offset, just revert back to the previously selected value
             if(offset === 0) {
                 return this.setProperties({
@@ -334,6 +348,7 @@
             }
 
             if(overSpin > 0) {
+                this.get('rowsView').enableTransitions(200);
                 if(overSpin < (rowH / 2)) {
                     return this.spin(offset < 0 ? overSpin : -overSpin, true);
                 } else {
@@ -378,7 +393,8 @@
                 offset = Math.min((Math.pow(accel, 2) * this.get('height')), this.get('maxSpinDistance'));
             
             if(touchDist < 0) offset *= -1;
-            this.get('rowsView').enableTransitions(800, 'cubic-bezier(0.250, 0.460, 0.450, 0.940)');
+
+            this.get('rowsView').enableTransitions(this.get('_momentumDuration'), 'cubic-bezier(0.250, 0.460, 0.450, 0.940)');
             this.spin(offset, true);
         },
 
@@ -548,6 +564,8 @@
         }.observes('yOffset')
     });
 
+    Ember.Handlebars.helper('spin-box-rows', SpinBoxRowsView);
+
     return SpinBoxRowsView;
 });
 (function(root, factory) {
@@ -558,8 +576,8 @@
             './components/spin-box-selection-win.js',
             './components/spin-box.js',
             './views/spin-box-rows.js'
-        ], function(Ember) { 
-            return factory(Ember); 
+        ], function(Ember, Row, SelectionWin, SpinBox, Rows) { 
+            return factory(Ember, Row, SelectionWin, SpinBox, Rows); 
         });
     } else if(typeof exports === 'object') {
         module.exports = factory(

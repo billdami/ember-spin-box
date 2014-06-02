@@ -4,7 +4,7 @@ App.ApplicationController = Ember.ObjectController.extend({
     curContent: 'numbers',
     numbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
     periods: ['AM', 'PM'],
-    range: [1900, 4000],
+    range: [1900, 2000],
 
     spinBoxContent: function() {
         return this.get(this.get('curContent'));

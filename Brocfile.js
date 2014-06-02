@@ -40,7 +40,9 @@ demoCss = compileLess(
 if(env === 'production') {
     prodJs = uglifyJs(concat(sourceTree, {
         inputFiles: [
-            'components/**/*.js'
+            'components/**/*.js',
+            'views/**/*.js',
+            'main.js'
         ],
         outputFile: '/ember-spin-box.min.js'
     }));

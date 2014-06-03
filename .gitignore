@@ -3,7 +3,6 @@ node_modules
 
 # temporary/dev files and directories
 tmp
-dev
 
 # sublime text
 *.sublime-workspace

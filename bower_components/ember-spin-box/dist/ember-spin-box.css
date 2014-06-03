@@ -10,6 +10,9 @@
   width: 100%;
 }
 .spinbox-row {
+  position: absolute;
+  left: 0;
+  right: 0;
   overflow: hidden;
   white-space: nowrap;
   cursor: pointer;
@@ -49,6 +52,7 @@
   color: #555;
 }
 .spinbox-selection-window {
+  height: 28px;
   z-index: 1;
   background: #f7f7f7;
   border-top: 1px solid #eee;

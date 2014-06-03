@@ -1,52 +1,112 @@
-(function(root) {
-    var SpinBoxComponent = Ember.Component.extend({
-        classNames: ['spinbox'],
-        attributeBindings: ['tabindex'],
+(function(root, factory) {
+    if(typeof define === 'function' && define.amd) {
+        define(['ember'], function(Ember) { return factory(Ember); });
+    } else if(typeof exports === 'object') {
+        module.exports = factory(require('ember'));
+    } else {
+        root.SpinBoxRowComponent = factory(Ember);
+    }
+})(this, function(Ember) {
+    
+    var SpinBoxRowComponent = Ember.Component.extend({
+        layout: Ember.Handlebars.compile('{{value}}'),
+        classNames: ['spinbox-row'],
+        classNameBindings: ['selected'],
+        attributeBindings: ['style'],
 
+        selected: function() {
+            return this.get('index') === this.get('parentView.parentView._selectedIndex');
+        }.property('index', 'parentView.parentView._selectedIndex'),
+
+        style: function() {
+            return 'top:' + this.get('top') + 'px';
+        }.property('top'),
+
+        handleClick: function() {
+            var selectedRow = this.get('parentView').findBy('selected', true);
+            
+            if(selectedRow && this.get('value') && !this.get('selected')) {
+                this.get('parentView.parentView').spin(selectedRow.get('top') - this.get('top'), true);
+            }
+        }.on('click')
+    });
+
+    return SpinBoxRowComponent;
+});
+(function(root, factory) {
+    if(typeof define === 'function' && define.amd) {
+        define(['ember'], function(Ember) { return factory(Ember); });
+    } else if(typeof exports === 'object') {
+        module.exports = factory(require('ember'));
+    } else {
+        root.SpinBoxSelectionWinComponent = factory(Ember);
+    }
+})(this, function(Ember) {
+    
+    var SpinBoxSelectionWinComponent = Ember.Component.extend({
+        classNames: ['spinbox-selection-window'],
+
+        setup: function() {
+            this.positionEl();
+        }.on('didInsertElement'),
+
+        positionEl: function() {
+            var rowH = this.get('parentView.rowHeight');
+            this.$().css('margin-top', '-' + (rowH / 2) + 'px');
+        }.observes('parentView.rowHeight')
+    });
+
+    return SpinBoxSelectionWinComponent;
+});
+(function(root, factory) {
+    if(typeof define === 'function' && define.amd) {
+        define([
+            'ember', 
+            './components/spin-box-row.js'
+        ], function(Ember, Row) { 
+            return factory(Ember, Row); 
+        });
+    } else if(typeof exports === 'object') {
+        module.exports = factory(
+            require('ember'),
+            require('./components/spin-box-row.js')
+        );
+    } else {
+        root.SpinBoxComponent = factory(
+            Ember, 
+            root.SpinBoxRowComponent
+        );
+    }
+})(this, function(Ember, Row) {
+
+    var SpinBoxComponent = Ember.Component.extend({
         layout: Ember.Handlebars.compile(
-            '<div class="spinbox-rows">' +
-                '{{#each row in rows}}' +
-                    '<div {{bind-attr class=":spinbox-row row.selected"}} {{action "rowClick" row.text}}>{{row.text}}</div>' +
-                '{{/each}}' +
-            '</div>' +
-            '<div class="spinbox-selection-window"></div>' 
+            '{{spin-box-rows}}'+
+            '{{spin-box-selection-win}}'
         ),
 
+        classNames: ['spinbox'],
+        attributeBindings: ['tabindex'],
         visibleRows: 5,
         rowHeight: 28,
         circular: true,
-        value: null,
         tabindex: null,
-        
-        _selected: null,
-        _selectedIndex: 0,
-        _scrollAnimDuration: 60,
-        _throttledSpinTimer: null,
-        _scrollSpeedLimit: 1.2,
-        _scrollStartThreshold: 8,
-        _swipeMoveThreshold: 500,
-        _swipeOffsetThreshold: 20,
-        _scrollAcceleration: 0.5,
-        _scrollAccelerationThreshold: 300,
-        _scrollMultiplier: 1,
-        _touchStartTime: 0,
-        _touchMoveTime: 0,
-        _touchEndTime: 0,
-        _touchDistance: 0,
-        _touchAccel: 0,
-        _touchPageY: null,
-        _touchMoveY: null,
-        _touchMoveDelta: 0,
-        _startSpin: false,
-        _momentumScrollTimer: null,
+
+        _bufferSize: 20,
+        _defaultTransDuration: 400,
+        _defaultTransTiming: 'ease',
+        _totalSpinOffset: 0,
+        _betweenRowOffset: 0,
+        _momentumDuration: 800,
 
         setup: function() {
+            //make sure visibleRows is an odd number
+            if(this.get('visibleRows') % 2 !== 1) {
+                this.incrementProperty('visibleRows');
+            }
+
             this.$el = this.$();
-            this.$rowsCt = this.$('.spinbox-rows:first');
-            this.$selectionWin = this.$('.spinbox-selection-window:first');
-            this.layoutUI();
-            this.initRows();
-            this.handleValueChange();
+            this.adjustHeight();
             this.$el.on('mousewheel DOMMouseScroll', Em.run.bind(this, this.handleMouseWheel));
         }.on('didInsertElement'),
 
@@ -54,311 +114,504 @@
             this.$el.off();
         }.on('willDestroyElement'),
 
-        layoutUI: function() {
-            this.$el.height(this.get('height'));
-            this.$selectionWin.css({
-                'height': this.get('rowHeight'),
-                'margin-top': '-' + (this.get('rowHeight') / 2) + 'px'
-            });
-        },
+        numRowViews: function() {
+            return this.get('visibleRows') + (this.get('_bufferSize') * 2);
+        }.property('_bufferSize', 'visibleRows'),
 
-        resetRowsPosition: function() {
-            this.$rowsCt.css('top', '-' + this.get('rowHeight') + 'px');
-        },
+        maxSpinDistance: function() {
+            return this.get('_bufferSize') * this.get('rowHeight');
+        }.property('_bufferSize', 'rowHeight'),
 
         height: function() {
             return this.get('rowHeight') * this.get('visibleRows');
         }.property('rowHeight', 'visibleRows'),
 
-        maxScrollOffset: function() {
-            return this.get('height') * this.get('_scrollSpeedLimit');
-        }.property('height', '_scrollSpeedLimit'),
+        adjustHeight: function() {
+            this.$el.height(this.get('height'));
+        }.observes('height'),
 
-        scrollDuration: function() {
-            return this.get('height') * 1.5;
-        }.property('height'),
+        renderRows: function() {
+            var rowView = Row,
+                rowsView = this.get('rowsView'),
+                rowH = this.get('rowHeight'),
+                numRows = this.get('numRowViews'),
+                val = this.get('value'),
+                valIndex = this.indexOf(val),
+                selIndex = valIndex === -1 ? this.get('floor') : valIndex,
+                newVal = this.valueAt(selIndex),
+                startIndex = selIndex - Math.floor(numRows / 2),
+                views = [];
 
-        numPaddingRows: function() {
-            return Math.floor(this.get('visibleRows') / 2) + 1;
-        }.property('visibleRows'),
+            this.setProperties({
+                _selectedIndex: selIndex,
+                _ignoreValueChange: (val !== newVal),
+                value: valIndex === -1 ? newVal : val
+            });
 
-        initRows: function() {
-            var numRows = (this.get('numPaddingRows') * 2) + 1,
-                rows = [];
-
-            for(var i=1; i<=numRows; i++) {
-                rows.push(Em.Object.create({text: "", selected: (i === (this.get('numPaddingRows') + 1))}));
+            for(var i=0; i<numRows; i++) {
+                views.push(rowView.create({
+                    index: startIndex + i,
+                    value: this.valueAt(startIndex + i),
+                    top: rowH * i
+                }));
             }
 
-            this.set('rows', rows);
+            rowsView.disableTransitions();
+            rowsView.setObjects(views);
+            rowsView.positionEl();
         },
 
-        updateRows: function() {
-            var selectedIndex = this.get('_selectedIndex'),
-                numAvailRows = this.getCeiling(),
-                numPadRows = this.get('numPaddingRows'),
-                rows = this.get('rows');
+        valuesSource: function() {
+            return Em.isArray(this.get('content')) ? 'content' : (this.get('rangeIsValid') ? 'range' : null);
+        }.property('content', 'rangeIsValid'),
 
-            rows[numPadRows].set('text', this.getRowText(selectedIndex, numAvailRows));
+        rangeIsValid: function() {
+            var r = this.get('range');
+            return (Em.isArray(r) && r.length === 2 && typeof r[0] === 'number' && typeof r[1] === 'number' && r[0] <= r[1]);
+        }.property('range'),
 
-            for(var i=1; i<=numPadRows; i++) {
-                rows[numPadRows - i].set('text', this.getRowText(selectedIndex - i, numAvailRows));
-                rows[numPadRows + i].set('text', this.getRowText(selectedIndex + i, numAvailRows));
+        floor: function() {
+            var floor;
+            switch(this.get('valuesSource')) {
+                case 'range':
+                    floor = this.get('range')[0];
+                    break;
+                default:
+                    floor = 0;
+                    break;
             }
 
-            Em.run.scheduleOnce('afterRender', this, this.resetRowsPosition);
-        },
+            return floor;
+        }.property('valuesSource'),
 
-        updateSelection: function(updateValueParam, sendAction) {
-            var index = this.get('_selectedIndex'),
-                props = { _selected: this.valueAt(index) };
-
-            if(updateValueParam === true) {
-                props.value = props._selected;
+        ceiling: function() {
+            var ceiling;
+            switch(this.get('valuesSource')) {
+                case 'content':
+                    ceiling = this.get('content').length;
+                    break;
+                case 'range':
+                    ceiling = this.get('range')[1] + 1;
+                    break;
+                default:
+                    ceiling = 1;
+                    break;
             }
 
-            this.setProperties(props);
-            this.updateRows();
-
-            if(sendAction) {
-                //send the action after all bindings have been synced
-                Em.run.scheduleOnce('sync', this, function() {
-                    this.sendAction('onUpdate', props._selected, index);
-                });
-            }
-        },
-
-        getRowText: function(index, ceiling) {
-            if(index >= this.getFloor() && index < ceiling) {
-                return this.valueAt(index);
-            } else if(this.get('circular') === false) {
-                return new Handlebars.SafeString('&nbsp;');
-            } else {
-                index = this.getAdjustedIndex(index, ceiling);
-                return this.valueAt(index);
-            }
-        },
-
-        getCeiling: function() {
-            if(Em.isArray(this.get('content'))) {
-                return this.get('content').length;
-            } else if(Em.isArray(this.get('range'))) {
-                var r = this.get('range');
-                return typeof r[1] === 'number' ? r[1] + 1 : 0;
-            } else {
-                return 0;
-            }
-        },
-
-        getFloor: function() {
-            if(Em.isArray(this.get('content'))) {
-                return 0;
-            } else {
-                var r = this.get('range');
-                return Em.isArray(r) && typeof r[0] === 'number' ? r[0] : 0;
-            }
-        },
+            return ceiling;
+        }.property('valuesSource'),
 
         valueAt: function(index) {
-            var content = this.get('content');
-            return Em.isArray(content) ? content[index] : index;
+            var val;
+
+            if(this.get('circular')) {
+                index = this.adjustedIndex(index);
+            }
+
+            switch(this.get('valuesSource')) {
+                case 'content':
+                    val = this.get('content')[index];
+                    break;
+                case 'range':
+                    val = index < this.get('floor') || index >= this.get('ceiling') ? undefined : index;
+                    break;
+                default:
+                    val = undefined;
+                    break;
+            }
+
+            return val;
         },
 
-        indexOfValue: function(value) {
-            return Em.isArray(this.get('content')) ? 
-                this.get('content').indexOf(value) : 
-                Em.isNone(value) ? this.getFloor() : value;
+        indexOf: function(value) {
+            var index, r;
+            switch(this.get('valuesSource')) {
+                case 'content':
+                    index = this.get('content').indexOf(value);
+                    break;
+                case 'range':
+                    r = this.get('range');
+                    index = (Em.isNone(value) || value < r[0] || value > r[1]) ? -1 : value;
+                    break;
+                default:
+                    index = -1;
+                    break;
+            }
+
+            return index;
         },
 
-        getAdjustedIndex: function(index, ceiling) {
-            var floor = this.getFloor();
+        selectedIndex: function() {
+            return this.adjustedIndex(this.get('_selectedIndex'));
+        }.property('_selectedIndex'),
+
+        adjustedIndex: function(index) {
+            var len = this.get('ceiling'),
+                floor = this.get('floor'),
+                src = this.get('valuesSource');
+
             if(index < floor) {
-                while(index < floor) index = index + ceiling - floor;
-                return index;
-            } else if(index >= ceiling) {
-                while(index >= ceiling) index = index - ceiling + floor;
-                return index;
-            } else {
-                return index;
-            }
-        },
-
-        spin: function(direction) {
-            var newIndex = this.get('_selectedIndex') + (direction === 'up' ? -1 : 1),
-                len = this.getCeiling();
-
-            if(this.get('circular') === false && (newIndex < this.getFloor() || newIndex >= len)) {
-                return;
+                while(index < floor) {
+                    index = index % len;
+                    index = index === 0 ? floor : len + index - floor;
+                }
+            } else if(index >= len) {
+                while(index >= len) {
+                    index = (index % len) + floor;
+                }
             }
 
-            this.set('_selectedIndex', this.getAdjustedIndex(newIndex, len));
-            this.$rowsCt.stop(true, true);
-            this.$rowsCt.animate(
-                {top: (direction === 'up' ? '+' : '-') + '=' + this.get('rowHeight')},
-                this.get('_scrollAnimDuration'),
-                'swing',
-                Em.run.bind(this, function() {
-                    this.updateSelection(true, true);
-                })
-            );
+            return index;
         },
 
-        throttledSpin: function(direction) {
-            this.set('_throttledSpinTimer', Em.run.throttle(this, this.spin, direction, this.get('_scrollAnimDuration')));
+        cycleRows: function(direction) {
+            var ct = this.get('rowsView'),
+                rowH = this.get('rowHeight'),
+                prevChild = ct.objectAt(direction === 'down' ? ct.get('childViews').length - 1 : 0),
+                child = ct[direction === 'down' ? 'shiftObject' : 'popObject'](),
+                newChildIndex = prevChild.get('index') + (direction === 'down' ? 1 : -1);
+
+            ct[direction === 'down' ? 'pushObject' : 'unshiftObject'](child);
+            child.setProperties({
+                top: prevChild.get('top') + (direction === 'down' ? rowH : -rowH),
+                index: newChildIndex,
+                value: this.valueAt(newChildIndex)
+            });
         },
 
-        momentumSpin: function(duration, direction, currentSpin, totalSpins) {
-            this.throttledSpin(direction);
-            currentSpin++;
+        spin: function(yOffset, scheduleFinish) {
+                var ct = this.get('rowsView'),
+                rowH = this.get('rowHeight'),
+                curOffset = ct.get('yOffset'),
+                selIndex = this.get('_selectedIndex'),
+                curIndex = selIndex !== null ? selIndex : this.get('_prevSelectedIndex'),
+                totalOffset = this.get('_totalSpinOffset') + yOffset,
+                betweenRowOffset = this.get('_betweenRowOffset') + yOffset,
+                newIndex = curIndex + ((totalOffset / rowH) * -1);
 
-            if(currentSpin < totalSpins) {
-                var waitTime = this.easeOutQuad(currentSpin, 0, duration, totalSpins);
-                this.set('_momentumScrollTimer', Em.run.later(this, this.momentumSpin, duration, direction, currentSpin, totalSpins, waitTime));
-            } else {
-                this.setProperties({
-                    _momentumScrollTimer: null,
-                    _scrollMultiplier: 1
+            if(!this.get('circular') && (newIndex < this.get('floor') || Math.ceil(newIndex) >= this.get('ceiling'))) {
+                if(Math.abs(yOffset) > rowH) {
+                    this.get('rowsView').enableTransitions(this.get('_momentumDuration') / 2, 'cubic-bezier(0.250, 0.460, 0.450, 0.940)');
+
+                    if(Math.ceil(newIndex) >= this.get('ceiling')) {
+                        yOffset += (newIndex - (this.get('ceiling') - 1)) * rowH;
+                    } else {
+                        yOffset -= (this.get('floor') - newIndex) * rowH;
+                    }
+
+                    totalOffset = this.get('_totalSpinOffset') + yOffset;
+                    betweenRowOffset = this.get('_betweenRowOffset') + yOffset;
+                } else {
+                    return;
+                }
+            }
+
+            Em.run.cancel(this.get('_finishSpinTimer'));
+
+            if(Math.abs(betweenRowOffset) >= rowH) {
+                for(var i = 0; i < Math.floor(Math.abs(betweenRowOffset) / rowH); i++) {
+                    this.cycleRows(yOffset < 0 ? 'down' : 'up');    
+                }
+
+                betweenRowOffset = betweenRowOffset % rowH;
+            }
+            
+            ct.adjustYOffset(yOffset);
+            this.setProperties({
+                _prevSelectedIndex: curIndex,
+                _selectedIndex: null,
+                _totalSpinOffset: totalOffset,
+                _betweenRowOffset: betweenRowOffset,
+                _finishSpinTimer: scheduleFinish ? Em.run.later(this, this.finishSpin, this.get('_transDuration')) : null
+            });
+        },
+
+        finishSpin: function() {
+            var offset = this.get('_totalSpinOffset'),
+                rowH = this.get('rowHeight'),
+                overSpin = Math.abs(offset % rowH),
+                prevIndex = this.get('_prevSelectedIndex'),
+                newIndex,
+                newValue,
+                floorDist,
+                ceilDist;
+
+            this.get('rowsView').enableTransitions();
+            //if there was no change in the offset, just revert back to the previously selected value
+            if(offset === 0) {
+                return this.setProperties({
+                    _selectedIndex: prevIndex !== null ? prevIndex : this.get('_selectedIndex'),
+                    _prevSelectedIndex: null,
+                    _totalSpinOffset: 0,
+                    _betweenRowOffset: 0
                 });
             }
+
+            if(overSpin > 0) {
+                this.get('rowsView').enableTransitions(200);
+                if(overSpin < (rowH / 2)) {
+                    return this.spin(offset < 0 ? overSpin : -overSpin, true);
+                } else {
+                    return this.spin(offset < 0 ? -(rowH - overSpin) : rowH - overSpin, true);
+                }
+            }
+
+            newIndex = prevIndex + ((offset / rowH) * -1);
+            newValue = this.valueAt(newIndex);
+            this.setProperties({
+                _totalSpinOffset: 0,
+                _betweenRowOffset: 0,
+                _selectedIndex: newIndex,
+                _prevSelectedIndex: null,
+                _ignoreValueChange: true,
+                value: newValue
+            });
+
+            this.correctRowPositions();
+
+            //send the action after all bindings have been synced
+            Em.run.scheduleOnce('sync', this, function() {
+                this.sendAction('onUpdate', newValue, this.adjustedIndex(newIndex));
+            });
         },
 
-        easeOutQuad: function(t, b, c, d) {
-            return -c * (t /= d) * (t - 2) + b;
+        correctRowPositions: function() {
+            var ct = this.get('rowsView'),
+                selRowIndex = ct.indexOf(ct.findBy('selected', true)),
+                centerIndex = Math.ceil(ct.get('childViews').length / 2) - 1,
+                offset = centerIndex - selRowIndex;
+
+            if(offset !== 0) {
+                for(var i = 0; i < Math.abs(offset); i++) {
+                    this.cycleRows(offset < 0 ? 'down' : 'up');
+                }
+            }
         },
+
+        startMomentumSpin: function(touchDist, touchTime) {
+            var accel = Math.abs(touchDist / touchTime),
+                offset = Math.min((Math.pow(accel, 2) * this.get('height')), this.get('maxSpinDistance'));
+            
+            if(touchDist < 0) offset *= -1;
+
+            this.get('rowsView').enableTransitions(this.get('_momentumDuration'), 'cubic-bezier(0.250, 0.460, 0.450, 0.940)');
+            this.spin(offset, true);
+        },
+
+        handleParamsChange: function() {
+            Em.run.scheduleOnce('afterRender', this, this.renderRows);
+        }.observes('content', 'range', 'circular'),
 
         handleValueChange: function() {
-            var valIndex = this.indexOfValue(this.get('value'));
-            this.set('_selectedIndex', valIndex === -1 ? this.getFloor() : valIndex);
-            this.updateSelection();
+            if(this.get('_ignoreValueChange')) {
+                this.set('_ignoreValueChange', false);
+            } else {
+                Em.run.scheduleOnce('afterRender', this, this.renderRows);
+            }
         }.observes('value'),
-
-        handleOptionsChange: function() {
-            var valIndex = this.indexOfValue(this.get('_selected'));
-            this.set('_selectedIndex', valIndex === -1 ? this.getFloor() : valIndex);
-            this.updateSelection(true);
-        }.observes('content', 'range'),
 
         handleSpinUpWhen: function() {
             if(!this.get('spinUpWhen')) return;
-            this.throttledSpin('up');
+            this.spin(this.get('rowHeight'), true);
             this.set('spinUpWhen', false);
         }.observes('spinUpWhen'),
 
         handleSpinDownWhen: function() {
             if(!this.get('spinDownWhen')) return;
-            this.throttledSpin('down');
+            this.spin(-this.get('rowHeight'), true);
             this.set('spinDownWhen', false);
         }.observes('spinDownWhen'),
 
         handleTouchStart: function(e) {
-            e.preventDefault();
             this.setProperties({
                 _touchStartTime: e.timeStamp,
-                _touchPageY: e.originalEvent.touches[0].pageY,
-                _touchMoveY: false,
-                _touchMoveDelta: 0
+                _touchStartY: e.originalEvent.touches[0].pageY,
+                _touchDist: 0
             });
 
-            if(!Em.isNone(this.get('_momentumScrollTimer')) && (this.get('_touchStartTime') - this.get('_touchEndTime')) < this.get('_scrollAccelerationThreshold')) {
-                //user swiped while still in the momentum scroll phase, increase the multiplier for the offset
-                this.incrementProperty('_scrollMultiplier', this.get('_scrollAcceleration'));
-            } else {
-                //otherwise reset the multiplier
-                this.set('_scrollMultiplier', 1);
-            }
-            
-            if(this.get('_momentumScrollTimer')) {
-                Em.run.cancel(this.get('_momentumScrollTimer'));
-            }
+            this.get('rowsView').disableTransitions();
+            e.preventDefault();
         }.on('touchStart'),
 
         handleTouchMove: function(e) {
-            var movePageY = e.originalEvent.touches[0].pageY,
-                prevMoveY = this.get('_touchMoveY'),
-                prevDelta = this.get('_touchMoveDelta'),
-                startY = prevMoveY ? prevMoveY : this.get('_touchPageY'),
-                newMoveDelta = prevDelta + (startY - movePageY),
-                startSpin = Math.abs(newMoveDelta) > this.get('_scrollStartThreshold'),
-                distance, 
-                accel;
-
-            e.preventDefault();
-
+            var pageY = e.originalEvent.touches[0].pageY,
+                prevY = this.get('_touchMoveY') ? this.get('_touchMoveY') : this.get('_touchStartY'),
+                offset = pageY - prevY;
+            
             this.setProperties({
                 _touchMoveTime: e.timeStamp,
-                _touchMoveY: movePageY,
-                _touchMoveDelta: Math.abs(newMoveDelta) > this.get('_scrollStartThreshold') ? 0 : newMoveDelta,
-                _startSpin: startSpin
+                _touchMoveY: pageY,
+                _touchDist: this.get('_touchDist') + offset
             });
 
-            if(this.get('_startSpin')) {
-                //determine total distance moved from the touch start position
-                distance = this.get('_touchPageY') - movePageY;
-                //calculate acceleration during movement
-                accel = Math.abs(distance / (e.timeStamp - this.get('_touchStartTime')));
-
-                this.setProperties({
-                    _touchDistance: distance,
-                    _touchAccel: accel
-                });
-
-                if(this.get('_momentumScrollTimer')) {
-                    Em.run.cancel(this.get('_momentumScrollTimer'));
-                }
-
-                this.throttledSpin((startY - movePageY) < 0 ? 'up' : 'down');
-            }
+            this.spin(offset, false);
+            e.preventDefault();
         }.on('touchMove'),
 
         handleTouchEnd: function(e) {
-            var multiplier, touchTime, offset, numSpins, direction, duration;
-            e.preventDefault();
+            var touchTime = e.timeStamp - this.get('_touchStartTime'),
+                dist = this.get('_touchDist');
+
             this.setProperties({
                 _touchEndTime: e.timeStamp,
-                _touchMoveY: false,
-                _touchMoveDelta: 0
+                _touchMoveY: null
             });
-            
-            if(this.get('_startSpin')) {
-                multiplier = this.get('_scrollMultiplier');
-                touchTime = e.timeStamp - this.get('_touchMoveTime');
-                offset = Math.pow(this.get('_touchAccel'), 2) * this.get('height');
-                if(offset > this.get('maxScrollOffset')) offset = this.get('maxScrollOffset');
-                offset = (this.get('_touchDistance') < 0) ? -multiplier * offset : multiplier * offset;
 
-                if(this.get('_momentumScrollTimer')) {
-                    Em.run.cancel(this.get('_momentumScrollTimer'));
-                }
-
-                //based on the distance and speed of the swipe, calculate and execute the momentum phase of the scroll
-                if(touchTime < this.get('_swipeMoveThreshold') && offset !== 0 && Math.abs(offset) > this.get('_swipeOffsetThreshold')) {
-                    duration = this.get('scrollDuration');
-                    numSpins = Math.ceil((this.get('_touchDistance') + offset) / this.get('_scrollStartThreshold'));
-                    direction = numSpins < 0 ? 'up' : 'down';
-                    this.momentumSpin(duration, direction, 0, Math.abs(numSpins));
-                }
+            //if a swipe occurred, kick off a momentum spin phase
+            if(touchTime < 300 && Math.abs(dist) > 20) {
+                this.startMomentumSpin(dist, touchTime);
+            } else {
+                this.finishSpin();
             }
+
+            e.preventDefault();
         }.on('touchEnd'),
 
         handleKeyDown: function(e) {
             if(e.keyCode != 38 && e.keyCode != 40) return;
             e.preventDefault();
-            this.throttledSpin(e.keyCode == 38 ? 'up' : 'down');
+            this.spin((e.keyCode == 38 ? 1 : -1) * this.get('rowHeight'), true);
         }.on('keyDown'),
 
         handleMouseWheel: function(e) {
-            var origEvent = e.originalEvent;
+            var origEvent = e.originalEvent,
+                offset = ((origEvent.wheelDelta > 0 || origEvent.detail < 0) ? 1 : -1) * this.get('rowHeight');
             e.preventDefault();
-            this.throttledSpin((origEvent.wheelDelta > 0 || origEvent.detail < 0) ? 'up' : 'down');
+            this.spin(offset, true);
         },
 
-        actions: {
-            rowClick: function(rowValue) {
-                this.set('_selectedIndex', this.indexOfValue(rowValue));
-                this.updateSelection(true, true);
+        registerRowsView: function(view) {
+            this.set('rowsView', view);
+            this.renderRows();
+        }
+    });
+    
+    return SpinBoxComponent;
+});
+(function(root, factory) {
+    if(typeof define === 'function' && define.amd) {
+        define(['ember'], function(Ember) { return factory(Ember); });
+    } else if(typeof exports === 'object') {
+        module.exports = factory(require('ember'));
+    } else {
+        root.SpinBoxRowsView = factory(Ember);
+    }
+})(this, function(Ember) {
+
+    var SpinBoxRowsView = Ember.ContainerView.extend({
+        classNames: ['spinbox-rows'],
+
+        setup: function() {
+            this.$el = this.$();
+            this.get('parentView').registerRowsView(this);
+        }.on('didInsertElement'),
+
+        adjustYOffset: function(offset) {
+            this.set('yOffset', this.get('yOffset') + offset);
+        },
+
+        positionEl: function() {
+            var yOffset = (this.get('parentView._bufferSize')) * this.get('parentView.rowHeight') * -1;
+            this.set('yOffset', yOffset);
+            Em.run.next(this, this.enableTransitions);
+        }.observes('parentView.rowHeight', 'parentView.visibleRows', 'parentView._bufferSize'),
+
+        enableTransitions: function(duration, timingFn) {
+            var cssVal;
+            duration = duration || this.get('parentView._defaultTransDuration');
+            timingFn = timingFn || this.get('parentView._defaultTransTiming');
+
+            if(!this.get('_transEnabled') || duration !== this.get('parentView._transDuration') || timingFn !== this.get('parentView._transTiming')) {
+                cssVal = 'transform ' + (duration / 1000) + 's ' + timingFn;
+
+                this.$el.css({
+                    '-webkit-transition': '-webkit-' + cssVal,
+                    '-moz-transition': '-moz-' + cssVal,
+                    '-ms-transition': '-ms-' + cssVal,
+                    '-o-transition': '-o-' + cssVal,
+                    'transition': cssVal
+                });
+
+                this.set('_transEnabled', true);
+
+                this.get('parentView').setProperties({
+                    _transDuration: duration,
+                    _transTiming: timingFn
+                });
             }
+        },
+
+        disableTransitions: function() {
+            this.set('_transEnabled', false);
+            this.$el.css({
+                '-webkit-transition': '',
+                '-moz-transition': '',
+                '-ms-transition': '',
+                '-o-transition': '',
+                'transition': ''
+            });
+        },
+
+        handleOffsetChange: function() {
+            var cssVal = 'translateY(' + this.get('yOffset') + 'px)';
+            this.$el.css({
+                '-webkit-transform': cssVal,
+                '-moz-tranform': cssVal,
+                '-ms-tranform': cssVal,
+                '-o-transform': cssVal,
+                'transform': cssVal
+            });
+        }.observes('yOffset')
+    });
+
+    Ember.Handlebars.helper('spin-box-rows', SpinBoxRowsView);
+
+    return SpinBoxRowsView;
+});
+(function(root, factory) {
+    if(typeof define === 'function' && define.amd) {
+        define([
+            'ember',
+            './components/spin-box-row.js',
+            './components/spin-box-selection-win.js',
+            './components/spin-box.js',
+            './views/spin-box-rows.js'
+        ], function(Ember, Row, SelectionWin, SpinBox, Rows) { 
+            return factory(Ember, Row, SelectionWin, SpinBox, Rows); 
+        });
+    } else if(typeof exports === 'object') {
+        module.exports = factory(
+            require('ember'),
+            require('./components/spin-box-row.js'),
+            require('./components/spin-box-selection-win.js'),
+            require('./components/spin-box.js'),
+            require('./views/spin-box-rows.js')
+        );
+    } else {
+        factory(
+            Ember,
+            root.SpinBoxRowComponent,
+            root.SpinBoxSelectionWinComponent,
+            root.SpinBoxComponent,
+            root.SpinBoxRowsView
+        );
+    }
+})(this, function(Ember, Row, SelectionWin, SpinBox, Rows) {
+
+    Ember.Application.initializer({
+        name: 'spin-box',
+        initialize: function(container, application) {
+            container.register('component:spin-box-row', Row);
+            container.register('component:spin-box-selection-win', SelectionWin);
+            container.register('component:spin-box', SpinBox);
+            container.register('view:spin-box-rows', Rows);
         }
     });
 
-    Ember.Handlebars.helper('spin-box', SpinBoxComponent);
-})(this);
+    return {
+        SpinBoxRowComponent: Row,
+        SpinBoxSelectionWinComponent: SelectionWin,
+        SpinBoxComponent: SpinBox,
+        Rows: SpinBoxRowsView
+    };
+});

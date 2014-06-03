@@ -13,7 +13,7 @@ http://billdami.com/ember-spin-box/
 Features
 --------
 
-* Tiny footprint (~2.5k javascript / <1k css, minified and gzipped)
+* Tiny footprint (~3.5k javascript / <1k css, minified and gzipped)
 * Supports mousewheel, keyboard, and touch-based interaction
 * Flexible list options configuration, provide an array of items or a numeric range
 * Exposes parameters to allow external control

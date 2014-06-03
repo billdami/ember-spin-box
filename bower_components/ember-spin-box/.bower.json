@@ -1,6 +1,6 @@
 {
   "name": "ember-spin-box",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "A lightweight and versatile spin box component for ember.js applications.",
   "author": "Bill Dami <billdami@gmail.com>",
   "license": "MIT",
@@ -14,14 +14,13 @@
     "qunit": "~1.14.0"
   },
   "homepage": "https://github.com/billdami/ember-spin-box",
-  "_release": "0.0.2",
+  "_release": "0.0.4",
   "_resolution": {
     "type": "version",
-    "tag": "v0.0.2",
-    "commit": "7ca9405907d2833986ce3328e902db121e37946f"
+    "tag": "v0.0.4",
+    "commit": "3d1fcf288fdfe6ee4288a69ce4fd15c1ba1dbcac"
   },
   "_source": "git://github.com/billdami/ember-spin-box.git",
-  "_target": "~0.0.2",
-  "_originalSource": "ember-spin-box",
-  "_direct": true
+  "_target": "~0.0.3",
+  "_originalSource": "ember-spin-box"
 }

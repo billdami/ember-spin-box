@@ -8,16 +8,29 @@ var env = require('broccoli-env').getEnv(),
     compileTemplates = require('ember-template-compiler'),
     sourceTree = 'lib',
     stylesTree = 'lib/styles',
+    templatesTree = 'lib/templates',
+    templates,
     js,
     css,
-    demoCss,
     prodJs,
     prodCss;
 
-js = concat(sourceTree, {
+templates = buildTemplates(templatesTree, {
+    extensions: ['hbs'],
+    outputFile: 'templates.js',
+    namespace: 'Ember.TEMPLATES',
+    compile: function(string) {
+        return 'Ember.Handlebars.template(' + compileTemplates.precompile(string) + ')';
+    }
+});
+
+js = concat(mergeTrees([templates, sourceTree]), {
     inputFiles: [
         'components/**/*.js',
         'views/**/*.js',
+        'templates-top.js',
+        'templates.js',
+        'templates-bottom.js',
         'main.js'
     ],
     outputFile: '/ember-spin-box.js'
@@ -26,22 +39,18 @@ js = concat(sourceTree, {
 css = compileLess(
     [stylesTree], 
     'ember-spin-box.less', 
-    'ember-spin-box.css', 
-    {compress: false}
-);
-
-demoCss = compileLess(
-    [stylesTree],
-    'demo.less',
-    'demo.css'
+    'ember-spin-box.css'
 );
 
 //create minified versions for production
 if(env === 'production') {
-    prodJs = uglifyJs(concat(sourceTree, {
+    prodJs = uglifyJs(concat(mergeTrees([templates, sourceTree]), {
         inputFiles: [
             'components/**/*.js',
             'views/**/*.js',
+            'templates-top.js',
+            'templates.js',
+            'templates-bottom.js',
             'main.js'
         ],
         outputFile: '/ember-spin-box.min.js'
@@ -55,4 +64,4 @@ if(env === 'production') {
     );
 }
 
-module.exports = mergeTrees(env === 'production' ? [prodJs, prodCss, js, css, demoCss] : [js, css, demoCss]);
+module.exports = mergeTrees(env === 'production' ? [templates, prodJs, prodCss, js, css] : [templates, js, css]);

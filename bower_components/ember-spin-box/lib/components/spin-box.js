@@ -20,11 +20,7 @@
 })(this, function(Ember, Row) {
 
     var SpinBoxComponent = Ember.Component.extend({
-        layout: Ember.Handlebars.compile(
-            '{{spin-box-rows}}'+
-            '{{spin-box-selection-win}}'
-        ),
-
+        layoutName: 'components/spin-box',
         classNames: ['spinbox'],
         attributeBindings: ['tabindex'],
         visibleRows: 5,
@@ -47,7 +43,7 @@
 
             this.$el = this.$();
             this.adjustHeight();
-            this.$el.on('mousewheel DOMMouseScroll', Em.run.bind(this, this.handleMouseWheel));
+            this.$el.on('mousewheel DOMMouseScroll', Ember.run.bind(this, this.handleMouseWheel));
         }.on('didInsertElement'),
 
         teardown: function() {
@@ -102,12 +98,12 @@
         },
 
         valuesSource: function() {
-            return Em.isArray(this.get('content')) ? 'content' : (this.get('rangeIsValid') ? 'range' : null);
+            return Ember.isArray(this.get('content')) ? 'content' : (this.get('rangeIsValid') ? 'range' : null);
         }.property('content', 'rangeIsValid'),
 
         rangeIsValid: function() {
             var r = this.get('range');
-            return (Em.isArray(r) && r.length === 2 && typeof r[0] === 'number' && typeof r[1] === 'number' && r[0] <= r[1]);
+            return (Ember.isArray(r) && r.length === 2 && typeof r[0] === 'number' && typeof r[1] === 'number' && r[0] <= r[1]);
         }.property('range'),
 
         floor: function() {
@@ -171,7 +167,7 @@
                     break;
                 case 'range':
                     r = this.get('range');
-                    index = (Em.isNone(value) || value < r[0] || value > r[1]) ? -1 : value;
+                    index = (Ember.isNone(value) || value < r[0] || value > r[1]) ? -1 : value;
                     break;
                 default:
                     index = -1;
@@ -246,7 +242,7 @@
                 }
             }
 
-            Em.run.cancel(this.get('_finishSpinTimer'));
+            Ember.run.cancel(this.get('_finishSpinTimer'));
 
             if(Math.abs(betweenRowOffset) >= rowH) {
                 for(var i = 0; i < Math.floor(Math.abs(betweenRowOffset) / rowH); i++) {
@@ -262,7 +258,7 @@
                 _selectedIndex: null,
                 _totalSpinOffset: totalOffset,
                 _betweenRowOffset: betweenRowOffset,
-                _finishSpinTimer: scheduleFinish ? Em.run.later(this, this.finishSpin, this.get('_transDuration')) : null
+                _finishSpinTimer: scheduleFinish ? Ember.run.later(this, this.finishSpin, this.get('_transDuration')) : null
             });
         },
 
@@ -310,7 +306,7 @@
             this.correctRowPositions();
 
             //send the action after all bindings have been synced
-            Em.run.scheduleOnce('sync', this, function() {
+            Ember.run.scheduleOnce('sync', this, function() {
                 this.sendAction('onUpdate', newValue, this.adjustedIndex(newIndex));
             });
         },
@@ -339,14 +335,14 @@
         },
 
         handleParamsChange: function() {
-            Em.run.scheduleOnce('afterRender', this, this.renderRows);
+            Ember.run.scheduleOnce('afterRender', this, this.renderRows);
         }.observes('content', 'range', 'circular'),
 
         handleValueChange: function() {
             if(this.get('_ignoreValueChange')) {
                 this.set('_ignoreValueChange', false);
             } else {
-                Em.run.scheduleOnce('afterRender', this, this.renderRows);
+                Ember.run.scheduleOnce('afterRender', this, this.renderRows);
             }
         }.observes('value'),
 

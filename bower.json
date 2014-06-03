@@ -7,6 +7,6 @@
     "**/.*"
   ],
   "dependencies": {
-    "ember-spin-box": "~0.0.4"
+    "ember-spin-box": "~0.0.5"
   }
 }

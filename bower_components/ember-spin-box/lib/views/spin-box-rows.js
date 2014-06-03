@@ -23,7 +23,7 @@
         positionEl: function() {
             var yOffset = (this.get('parentView._bufferSize')) * this.get('parentView.rowHeight') * -1;
             this.set('yOffset', yOffset);
-            Em.run.next(this, this.enableTransitions);
+            Ember.run.next(this, this.enableTransitions);
         }.observes('parentView.rowHeight', 'parentView.visibleRows', 'parentView._bufferSize'),
 
         enableTransitions: function(duration, timingFn) {
